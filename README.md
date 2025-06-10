@@ -17,7 +17,7 @@ This project uses [uv](https://pypi.org/project/uv/) for managing the developmen
     ```sh
     uv sync
     ```
-    This will create a virtual environment `.venv` under project folder and install all the dependencies listed in the `pyproject.toml` file. `src` will be added with `setuptools` so that you can import the modules directly: `from preprocessing import preprocess_adata`.
+    This will create a virtual environment `.venv` under project folder and install all the dependencies listed in the `pyproject.toml` file.
 
     If you don't want to sync venv settings but prefer to have you own, you can run:
     
