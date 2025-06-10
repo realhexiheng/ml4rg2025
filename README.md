@@ -16,10 +16,6 @@ TODO - just markdown or google doc?
 ## Environment Setup
 This project uses [uv](https://pypi.org/project/uv/) for managing the development environment.
 
-    ```sh
-    pip install uv
-    ```
-
 1. **Sync development environment**
 
     ```sh
