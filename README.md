@@ -1,11 +1,7 @@
 # ML4RG2025
 project 06 - Predicting multiple RNA profiles at once on Saccharomyces cerevisiae
 
-
-# cross-tissue-learning
-Repository to explore whether we can predict the state of a tissue based on another tissue from the same donor.
-
-## Resoruces
+## Resources
 
 [Project description](https://docs.google.com/document/d/1371zvQSwjMryL6-9ZU7JzNc-EwSsMsTFOqVXHBheF98/edit?tab=t.0)
 
