@@ -1,0 +1,33 @@
+[project]
+name = "m4lrg2025"
+version = "0.1.0"
+description = "Predicting multiple RNA profiles at once on Saccharomyces cerevisiae"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatchling.build.targets.wheel]
+packages = ["src"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0.0",
+]
+
+[tool.ruff]
+src = ["src"]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = []
+ignore = ["E501"]
