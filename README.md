@@ -28,6 +28,7 @@ This project uses [uv](https://pypi.org/project/uv/) for managing the developmen
     then install the dependencies as in next step.
 
 2. **Install additional dependencies**
+
     For additional dependencies:
     ```sh
     uv install <package-name>
