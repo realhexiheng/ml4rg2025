@@ -5,6 +5,10 @@ __pycache__/
 
 # Data
 data/
+src/RNA_prediction
+src/RNA_prediction-mini
+lightning_logs/
+wandb/
 
 # C extensions
 *.so
