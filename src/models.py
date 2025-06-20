@@ -108,9 +108,9 @@ class ConvolutionalModel(pl.LightningModule):
 
         # Pooling across window_size dimension
         if self.pooling_type == "mean":
-            x = torch.mean(x, dim=2)
+            x = torch.mean(x, dim=2)# [batch_size, n_conditions]
         else:
-            x = torch.max(x, dim=2)[0]
+            x = torch.max(x, dim=2)[0]# [batch_size, n_conditions]
         return x
 
     def training_step(self, batch, batch_idx):
@@ -123,7 +123,7 @@ class ConvolutionalModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x, y = batch
         x = x.float()
-        y_hat = self(x)
+        y_hat = self(x.float())
         loss = self.loss_fn(y_hat, y.float())
         self.log("val_loss", loss)
 
