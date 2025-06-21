@@ -1,4 +1,4 @@
-from src.data.datamodule import CrossValidationDataModule
+from src.data.datamodule import CrossValidationDataModule, HDFReader
 
 
 def test_datamodule():
@@ -7,7 +7,7 @@ def test_datamodule():
     print("=" * 50)
 
     datamodule = CrossValidationDataModule(
-        hdf="data/prepared/genewise.h5",
+        reader=HDFReader("data/prepared/genewise.h5"),
         dataset="data/prepared/chromosome_stratified_dataset",
         test_fold=0,
         validation=True,
@@ -50,7 +50,7 @@ def test_datamodule_no_validation():
     print("=" * 50)
 
     datamodule = CrossValidationDataModule(
-        hdf="data/prepared/genewise.h5",
+        reader=HDFReader("data/prepared/genewise.h5"),
         dataset="data/prepared/chromosome_stratified_dataset",
         test_fold=0,
         validation=False,

@@ -36,6 +36,13 @@ class HDFReader:
         return embeddings, expressions
 
 
+class NumpyArrayLoader:
+    "If nico want to load numpy arrays directly"
+
+    def __getitem__(self, key: str) -> tuple[np.ndarray, np.ndarray]:
+        pass
+
+
 class CrossValidationDataModule(L.LightningDataModule):
     """
     Lightning DataModule for DNA embeddings with chromosome-wise cross-validation.
@@ -44,7 +51,7 @@ class CrossValidationDataModule(L.LightningDataModule):
 
     def __init__(
         self,
-        hdf: str | Path,
+        reader: HDFReader | NumpyArrayLoader,
         dataset: str | Path,
         test_fold: int,
         validation: bool = False,
@@ -76,8 +83,8 @@ class CrossValidationDataModule(L.LightningDataModule):
         if not 0 <= test_fold <= 4:
             raise ValueError(f"Index of fold must be 0-4, got {test_fold}")
 
+        self.reader = reader
         self.dataset = load_from_disk(dataset)
-        self.reader = HDFReader(hdf)
 
         self.train_data = None
         self.val_data = None
