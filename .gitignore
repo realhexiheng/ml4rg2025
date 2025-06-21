@@ -153,6 +153,9 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# docs
+docs/
+
 # mypy
 .mypy_cache/
 .dmypy.json
@@ -185,7 +188,10 @@ cython_debug/
 #  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
 #  and can be added to the global gitignore or merged into this file. However, if you prefer, 
 #  you could uncomment the following to ignore the enitre vscode folder
-# .vscode/
+.vscode/
+
+# github actions
+.github/
 
 # Ruff stuff:
 .ruff_cache/
@@ -193,9 +199,18 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# Cursor
-#  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
-#  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
-#  refer to https://docs.cursor.com/context/ignore-files
-.cursorignore
-.cursorindexingignore
+# data files
+data/
+!src/data/
+
+# notebooks
+notebooks/
+
+# temporary files
+obsolete/
+scripts/
+.pybiomart.sqlite
+dvc.yaml
+params.yaml
+configs/experiment/sweep.yaml
+configs/config.yaml

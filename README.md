@@ -7,6 +7,9 @@ project 06 - Predicting multiple RNA profiles at once on Saccharomyces cerevisia
 
 [Data](https://drive.google.com/drive/u/0/folders/1IHKACrqhhqUHTQUjqecX9ttJ4w209gwN)
 
+[Shared Data from Xiheng](https://drive.google.com/drive/folders/10OPQ8c530qhksk2GFFNUUtRsmL72SZcT?usp=sharing)
+[Shared Data from Nico](https://drive.google.com/drive/folders/1nvqwrMND1klkVFwYz8_4wdAdYodCLJP4?usp=sharing)
+
 TODO - just markdown or google doc?
 
 ## Environment Setup
