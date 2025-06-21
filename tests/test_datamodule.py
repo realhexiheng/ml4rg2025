@@ -1,4 +1,4 @@
-from src.data.datamodule import CrossValidationDataModule
+from src.dataset.datamodule import CrossValidationDataModule
 
 
 def test_datamodule():
