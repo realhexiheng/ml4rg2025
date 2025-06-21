@@ -194,6 +194,7 @@ cython_debug/
 
 # data files
 data/
+!src/data/
 
 # notebooks
 notebooks/
