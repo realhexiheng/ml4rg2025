@@ -1,4 +1,4 @@
-from dataset.dataset import (
+from data.dataset import (
     ChromosomeDatasetSplit,
     ChromosomeStratifiedDatasetSplit,
     ParalogousGeneDataset,
