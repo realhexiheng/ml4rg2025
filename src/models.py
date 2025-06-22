@@ -3,6 +3,7 @@ import torch
 import pytorch_lightning as pl
 import csv
 
+
 class LinearModel(pl.LightningModule):
     """
     Ridge regression model.
@@ -46,6 +47,7 @@ class LinearModel(pl.LightningModule):
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
 
+
 class ConvolutionalModel(pl.LightningModule):
     """
     Model that uses 1D convolution with kernel size 1 across the embedding dimension,
@@ -62,6 +64,7 @@ class ConvolutionalModel(pl.LightningModule):
     pooling_type : str
         Type of pooling to use, either 'mean' or 'max'.
     """
+
     def __init__(
         self,
         window_size: int = 500,
@@ -90,13 +93,11 @@ class ConvolutionalModel(pl.LightningModule):
         self.csv_log_path = "max_positions_log.csv"
         self.logged_rows = []
 
-        
-
     def on_fit_start(self):
-        #create position tracking file
+        # create position tracking file
         with open(self.csv_log_path, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["epoch","gene", "condition", "max_position", "max_value"])
+            writer.writerow(["epoch", "gene", "condition", "max_position", "max_value"])
 
     def forward(self, x):
         # x shape: [batch_size, window_size, 768]
@@ -108,9 +109,9 @@ class ConvolutionalModel(pl.LightningModule):
 
         # Pooling across window_size dimension
         if self.pooling_type == "mean":
-            x = torch.mean(x, dim=2)# [batch_size, n_conditions]
+            x = torch.mean(x, dim=2)  # [batch_size, n_conditions]
         else:
-            x = torch.max(x, dim=2)[0]# [batch_size, n_conditions]
+            x = torch.max(x, dim=2)[0]  # [batch_size, n_conditions]
         return x
 
     def training_step(self, batch, batch_idx):
@@ -134,7 +135,7 @@ class ConvolutionalModel(pl.LightningModule):
 
     def _log_max_positions(self, x, batch_idx):
         if self.current_epoch == 0 and self.global_step == 0:
-          return
+            return
         x_conv = self.conv(x.transpose(1, 2))  # shape: [B, C, L]
         max_vals, max_positions = torch.max(x_conv, dim=2)
 
@@ -144,13 +145,15 @@ class ConvolutionalModel(pl.LightningModule):
             gene = self.trainer.val_dataloaders.dataset.genes[dataset_idx]
 
             for cond in range(max_vals.shape[1]):
-                self.logged_rows.append([
-                      self.current_epoch,  # ← epoch tracking
-                      gene,
-                      cond,
-                      int(max_positions[i, cond].item()),
-                      float(max_vals[i, cond].item())
-                  ])
+                self.logged_rows.append(
+                    [
+                        self.current_epoch,  # ← epoch tracking
+                        gene,
+                        cond,
+                        int(max_positions[i, cond].item()),
+                        float(max_vals[i, cond].item()),
+                    ]
+                )
 
     def on_validation_epoch_end(self):
         if self.logged_rows:
