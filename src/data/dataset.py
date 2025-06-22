@@ -11,10 +11,13 @@ from src.utils.genome import (
     get_cds_coord,
     get_chromosome_lengths,
     get_chromosome_valid_genes,
+    parse_gff,
+)
+
+from src.utils.expression import (
     get_gene_embeddings,
     get_normalized_gene_expression,
     load_sample_expression,
-    parse_gff,
 )
 
 
