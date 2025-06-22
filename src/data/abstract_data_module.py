@@ -1,40 +1,12 @@
 from pathlib import Path
 from abc import ABC, abstractmethod
 
-import h5py
 import lightning as L
-import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-
-class HDFReader:
-    """Reader class for HDF5 files containing chromosome-wise gene embeddings and expressions."""
-
-    def __init__(self, hdf: str | Path):
-        """
-        Initialize HDFReader with path to HDF5 file.
-
-        Args:
-            hdf (str | Path): Path to the HDF5 file
-        """
-        self.data = h5py.File(hdf, "r")
-
-    def __getitem__(self, key: str) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Get embeddings and expressions for a given chromosome and gene indices.
-
-        Args:
-            key (str): CDS indentifier.
-
-        Returns:
-            (np.ndarray, np.ndarray): Tuple containing gene embeddings and normalized expressions.
-        """
-        embeddings = self.data[key]["embedding"][:]
-        expressions = self.data[key]["expression"][:]
-
-        return embeddings, expressions
+from src.utils.io import HDFReader
 
 
 class GeneDataset(Dataset):
@@ -184,68 +156,3 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
             "embeddings": embeddings,  # Shape: (batch_size, 500, 768)
             "expressions": expressions,  # Shape: (batch_size, 18)
         }
-
-
-class ChromosomeStratifiedDataModule(CrossValidationDataModule):
-    """
-    CrossValidationDataModule with chromosome-wise stratification.
-    """
-
-    def _create_folds(self):
-        """Create fold assignments using chromosome stratification."""
-        from sklearn.model_selection import StratifiedKFold
-
-        self.summary["fold"] = -1
-
-        skf = StratifiedKFold(
-            n_splits=5,
-            shuffle=True,
-            random_state=self.seed,
-        )
-
-        for fold, (_, test_idx) in enumerate(
-            skf.split(
-                X=self.summary["gene"],
-                y=self.summary["chromosome"],
-            )
-        ):
-            self.summary.loc[test_idx, "fold"] = fold
-
-        print("\nChromosome distribution by fold:")
-        print(self.summary.groupby(["fold", "chromosome"]).size().unstack(fill_value=0))
-
-
-class ParalogousGeneDataModule(CrossValidationDataModule):
-    """
-    CrossValidationDataModule with chromosome and paralog group stratification.
-    """
-
-    def _create_folds(self):
-        """Create fold assignments using chromosome and paralog group stratification."""
-        from sklearn.model_selection import StratifiedGroupKFold
-
-        if "paralog_group" not in self.summary.columns:
-            raise ValueError(
-                "Summary CSV must contain 'paralog_group' column with paralog information. "
-                "Please run preprocessing with include_paralogs=True."
-            )
-
-        self.summary["fold"] = -1
-
-        sgkf = StratifiedGroupKFold(
-            n_splits=5,
-            shuffle=True,
-            random_state=self.seed,
-        )
-
-        for fold, (_, test_idx) in enumerate(
-            sgkf.split(
-                self.summary["gene"],
-                self.summary["chromosome"],
-                groups=self.summary["paralog_group"],
-            )
-        ):
-            self.summary.loc[test_idx, "fold"] = fold
-
-        print("\nStratifiedGroupKFold chromosome distribution by fold:")
-        print(self.summary.groupby(["fold", "chromosome"]).size().unstack(fill_value=0))

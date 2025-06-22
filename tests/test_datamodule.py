@@ -1,4 +1,4 @@
-from src.data.datamodule import CrossValidationDataModule, HDFReader
+from src.data.abstract_data_module import CrossValidationDataModule, HDFReader
 
 
 def test_datamodule():
