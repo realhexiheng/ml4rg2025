@@ -1,11 +1,12 @@
 from pathlib import Path
+from abc import ABC, abstractmethod
 
 import h5py
 import lightning as L
 import numpy as np
+import pandas as pd
 import torch
-from datasets import load_from_disk
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 
 class HDFReader:
@@ -36,23 +37,28 @@ class HDFReader:
         return embeddings, expressions
 
 
-class NumpyArrayLoader:
-    "If nico want to load numpy arrays directly"
+class GeneDataset(Dataset):
+    """Simple Dataset wrapper for gene data."""
 
-    def __getitem__(self, key: str) -> tuple[np.ndarray, np.ndarray]:
-        pass
+    def __init__(self, data: pd.DataFrame):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data.iloc[idx].to_dict()
 
 
-class CrossValidationDataModule(L.LightningDataModule):
+class CrossValidationDataModule(L.LightningDataModule, ABC):
     """
-    Lightning DataModule for DNA embeddings with chromosome-wise cross-validation.
-    Uses HDF5 file for embeddings/expressions and summary CSV for fold information.
+    Abstract Lightning DataModule for DNA embeddings with cross-validation.
     """
 
     def __init__(
         self,
-        reader: HDFReader | NumpyArrayLoader,
-        dataset: str | Path,
+        reader: HDFReader,
+        summary: str | Path,
         test_fold: int,
         validation: bool = False,
         batch_size: int = 32,
@@ -60,11 +66,11 @@ class CrossValidationDataModule(L.LightningDataModule):
         seed: int = 42,
     ):
         """
-        Initialize DNADataModule.
+        Initialize CrossValidationDataModule.
 
         Args:
-            hdf: Path to HDF5 file containing gene embeddings and expressions
-            dataset: Path to saved HuggingFace dataset directory
+            reader: HDFReader instance for loading embeddings/expressions
+            summary: Path to summary CSV file
             test_fold: Which fold (0-4) to use as test set
             validation: Whether to split training data into train/val
             batch_size: Batch size for data loaders
@@ -74,6 +80,7 @@ class CrossValidationDataModule(L.LightningDataModule):
         super().__init__()
         self.save_hyperparameters()
 
+        self.reader = reader
         self.test_fold = test_fold
         self.validation = validation
         self.batch_size = batch_size
@@ -83,47 +90,40 @@ class CrossValidationDataModule(L.LightningDataModule):
         if not 0 <= test_fold <= 4:
             raise ValueError(f"Index of fold must be 0-4, got {test_fold}")
 
-        self.reader = reader
-        self.dataset = load_from_disk(dataset)
+        # Load and prepare data
+        self.summary = pd.read_csv(summary)
+        self._create_folds()
+        self._create_splits()
 
-        self.train_data = None
-        self.val_data = None
-        self.test_data = None
+    @abstractmethod
+    def _create_folds(self):
+        """Create fold assignments. Must add 'fold' column to self.summary."""
+        pass
 
-    def setup(self, stage: str | None = None):
-        """
-        Setup data for training/validation/testing.
-        """
-
-        if "fold" not in self.dataset.column_names:
-            raise ValueError("Dataset must contain 'fold' column")
-
-        test_data = self.dataset.filter(lambda x: x["fold"] == self.test_fold)
-        train_data = self.dataset.filter(lambda x: x["fold"] != self.test_fold)
+    def _create_splits(self):
+        """Create train/val/test splits based on fold assignments."""
+        test_data = self.summary[self.summary["fold"] == self.test_fold]
+        train_data = self.summary[self.summary["fold"] != self.test_fold]
         val_data = None
 
         if self.validation:
-            splits = train_data.train_test_split(
+            from sklearn.model_selection import train_test_split
+
+            train_data, val_data = train_test_split(
+                train_data,
                 test_size=0.2,
-                stratify_by_column="fold",
-                seed=self.seed,
+                stratify=train_data["fold"],
+                random_state=self.seed,
             )
 
-            train_data = splits["train"]
-            val_data = splits["test"]
-
-        if stage == "fit":
-            self.train_data = train_data
-            self.val_data = val_data if self.validation else None
-
-        if stage == "test":
-            self.test_data = test_data
+        self.train_data = GeneDataset(train_data.reset_index(drop=True))
+        self.val_data = (
+            GeneDataset(val_data.reset_index(drop=True)) if val_data is not None else None
+        )
+        self.test_data = GeneDataset(test_data.reset_index(drop=True))
 
     def train_dataloader(self):
         """Create training data loader."""
-        if self.train_data is None:
-            raise RuntimeError("train_data is None. Call setup() first.")
-
         return DataLoader(
             self.train_data,
             batch_size=self.batch_size,
@@ -149,9 +149,6 @@ class CrossValidationDataModule(L.LightningDataModule):
 
     def test_dataloader(self):
         """Create test data loader."""
-        if self.test_data is None:
-            raise RuntimeError("test_data is None. Call setup() first.")
-
         return DataLoader(
             self.test_data,
             batch_size=self.batch_size,
@@ -166,7 +163,7 @@ class CrossValidationDataModule(L.LightningDataModule):
         Custom collate function to load embeddings (X) and RNA targets (y) on-demand.
 
         Args:
-            batch: List of dictionaries from HuggingFace dataset
+            batch: List of dictionaries from dataset
 
         Returns:
             Dictionary with 'embeddings' and 'expressions' tensors
@@ -191,3 +188,68 @@ class CrossValidationDataModule(L.LightningDataModule):
             "embeddings": embeddings,  # Shape: (batch_size, 500, 768)
             "expressions": expressions,  # Shape: (batch_size, 18)
         }
+
+
+class ChromosomeStratifiedDataModule(CrossValidationDataModule):
+    """
+    CrossValidationDataModule with chromosome-wise stratification.
+    """
+
+    def _create_folds(self):
+        """Create fold assignments using chromosome stratification."""
+        from sklearn.model_selection import StratifiedKFold
+
+        self.summary["fold"] = -1
+
+        skf = StratifiedKFold(
+            n_splits=5,
+            shuffle=True,
+            random_state=self.seed,
+        )
+
+        for fold, (_, test_idx) in enumerate(
+            skf.split(
+                X=self.summary["gene"],
+                y=self.summary["chromosome"],
+            )
+        ):
+            self.summary.loc[test_idx, "fold"] = fold
+
+        print("\nChromosome distribution by fold:")
+        print(self.summary.groupby(["fold", "chromosome"]).size().unstack(fill_value=0))
+
+
+class ParalogousGeneDataModule(CrossValidationDataModule):
+    """
+    CrossValidationDataModule with chromosome and paralog group stratification.
+    """
+
+    def _create_folds(self):
+        """Create fold assignments using chromosome and paralog group stratification."""
+        from sklearn.model_selection import StratifiedGroupKFold
+
+        if "paralog_group" not in self.summary.columns:
+            raise ValueError(
+                "Summary CSV must contain 'paralog_group' column with paralog information. "
+                "Please run preprocessing with include_paralogs=True."
+            )
+
+        self.summary["fold"] = -1
+
+        sgkf = StratifiedGroupKFold(
+            n_splits=5,
+            shuffle=True,
+            random_state=self.seed,
+        )
+
+        for fold, (_, test_idx) in enumerate(
+            sgkf.split(
+                self.summary["gene"],
+                self.summary["chromosome"],
+                groups=self.summary["paralog_group"],
+            )
+        ):
+            self.summary.loc[test_idx, "fold"] = fold
+
+        print("\nStratifiedGroupKFold chromosome distribution by fold:")
+        print(self.summary.groupby(["fold", "chromosome"]).size().unstack(fill_value=0))
