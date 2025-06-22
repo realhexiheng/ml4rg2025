@@ -83,9 +83,17 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
         self.reader = reader
         self.test_fold = test_fold
         self.validation = validation
-        self.batch_size = batch_size
-        self.num_workers = num_workers
         self.seed = seed
+
+        self.dataloader_kwargs = {
+            "batch_size": batch_size,
+            "shuffle": True,
+            "prefetch_factor": 10,
+            "persistent_workers": True,
+            "num_workers": num_workers,
+            "collate_fn": self.collate_fn,
+            "pin_memory": True,
+        }
 
         if not 0 <= test_fold <= 4:
             raise ValueError(f"Index of fold must be 0-4, got {test_fold}")
@@ -126,11 +134,7 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
         """Create training data loader."""
         return DataLoader(
             self.train_data,
-            batch_size=self.batch_size,
-            shuffle=True,
-            num_workers=self.num_workers,
-            collate_fn=self.collate_fn,
-            pin_memory=True,
+            **self.dataloader_kwargs,
         )
 
     def val_dataloader(self):
@@ -140,22 +144,14 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
 
         return DataLoader(
             self.val_data,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-            collate_fn=self.collate_fn,
-            pin_memory=True,
+            **self.dataloader_kwargs,
         )
 
     def test_dataloader(self):
         """Create test data loader."""
         return DataLoader(
             self.test_data,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-            collate_fn=self.collate_fn,
-            pin_memory=True,
+            **self.dataloader_kwargs,
         )
 
     def collate_fn(self, batch: list[dict]) -> dict[str, torch.Tensor]:
