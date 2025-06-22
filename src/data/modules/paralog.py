@@ -1,4 +1,4 @@
-from src.data.abstract_data_module import CrossValidationDataModule
+from src.data.modules._abstract import CrossValidationDataModule
 from sklearn.model_selection import StratifiedGroupKFold
 
 class ParalogousGeneDataModule(CrossValidationDataModule):
