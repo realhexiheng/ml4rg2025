@@ -16,6 +16,7 @@ from src.utils.genome import (
     get_chromosome_valid_genes,
     parse_gff,
 )
+from src.utils.paralogs import query_paralogs, create_paralog_clusters
 
 
 def preprocess(
@@ -93,9 +94,7 @@ def preprocess(
             del chromosome_embedding
 
             gene_expression = get_normalized_gene_expression(
-                valid_cds_coords,
-                condition_samples,
-                sample_expression
+                valid_cds_coords, condition_samples, sample_expression
             )
 
             for i, gene in enumerate(valid_genes[chromosome]):
@@ -117,5 +116,11 @@ def preprocess(
             )
 
             summary = pd.concat([summary, chromosome_df], ignore_index=True)
+
+    # Create paralog groups
+    genes = summary["gene"].tolist()
+    paralogs = query_paralogs(genes)
+    paralog_mapping = create_paralog_clusters(genes, paralogs)
+    summary["paralog_group"] = summary["gene"].map(paralog_mapping)
 
     summary.to_csv(outdir / "summary.csv", index=False)
