@@ -36,30 +36,61 @@ def load_sample_expression(
 
 
 def get_gene_count(
-    cds_coord: tuple[int],
+    cds_coords: list[dict],
     sample_expression: dict[str, dict[str, np.ndarray]],
 ) -> np.ndarray:
-    """Get total gene expression count for a given CDS coordinate."""
-    strand = cds_coord["strand"]
-    chrom = cds_coord["chromosome"]
+    """Vectorized computation of gene counts for all genes at once.
 
+    Args:
+        cds_coords (list[dict]): List of gene CDS coordinates
+        sample_expression (dict): Expression data for all samples
+
+    Returns:
+        np.ndarray: Gene counts matrix with shape (num_genes, num_samples)
+    """
     samples = sorted(list(sample_expression.keys()))
+    n_genes = len(cds_coords)
+    n_samples = len(samples)
 
-    # Sum exon segments directly to avoid large temporary concatenated arrays
-    expression_values = np.zeros(len(samples))
-    for i, sample in enumerate(samples):
-        total = 0.0
+    gene_counts = np.zeros((n_genes, n_samples))
 
-        for start, end in cds_coord["coordinates"]:
-            total += sample_expression[sample][strand][chrom][start:end].sum()
+    # Group genes by chromosome and strand for better cache locality
+    gene_groups = {}
+    for i, cds_coord in enumerate(cds_coords):
+        key = (cds_coord["chromosome"], cds_coord["strand"])
+        if key not in gene_groups:
+            gene_groups[key] = []
+        gene_groups[key].append((i, cds_coord))
 
-        expression_values[i] = total
+    # Process each chromosome-strand group
+    for (chrom, strand), genes in gene_groups.items():
+        for sample_idx, sample in enumerate(samples):
+            expression_data = sample_expression[sample][strand][chrom]
 
-    return expression_values
+            for gene_idx, cds_coord in genes:
+                total = 0.0
+                for start, end in cds_coord["coordinates"]:
+                    total += expression_data[start:end].sum()
+                gene_counts[gene_idx, sample_idx] = total
+
+    return gene_counts
 
 
-def get_gene_length(cds_coord):
-    return sum(end - start for start, end in cds_coord["coordinates"])
+def get_gene_length(cds_coords: list[dict]) -> np.ndarray:
+    """Vectorized computation of gene lengths.
+
+    Args:
+        cds_coords (list[dict]): List of gene CDS coordinates
+
+    Returns:
+        np.ndarray: Gene lengths array
+    """
+    return np.array(
+        [
+            sum(end - start for start, end in cds_coord["coordinates"])
+            for cds_coord in cds_coords
+        ]
+    )
 
 
 def get_gene_embeddings(
@@ -152,15 +183,10 @@ def get_normalized_gene_expression(
     """
     samples = sorted(list(sample_expression.keys()))
 
-    gene_counts = np.zeros((len(cds_coords), len(samples)))
-    gene_lengths = np.zeros(len(cds_coords))
-
-    for i, cds_coord in enumerate(tqdm(cds_coords)):
-        gene_counts[i] = get_gene_count(cds_coord, sample_expression)
-        gene_lengths[i] = get_gene_length(cds_coord)
-
+    # Use vectorized functions for much better performance
+    gene_counts = get_gene_count(cds_coords, sample_expression)
+    gene_lengths = get_gene_length(cds_coords)
     gene_tpm = calculate_tpm(gene_counts, gene_lengths)
-
     condition_tpm, _ = aggregate_tpm_by_condition(gene_tpm, samples, condition_samples)
 
     return np.log1p(condition_tpm).astype(np.float16)

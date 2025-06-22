@@ -1,0 +1,75 @@
+{
+    "exponential_growth": [
+        "K01sl",
+        "K02sl",
+        "K01sl_2"
+    ],
+    "salt": [
+        "K03sl",
+        "K04sl"
+    ],
+    "DNA_damage": [
+        "K05sl",
+        "K06sl"
+    ],
+    "alpha_factor": [
+        "K07sl",
+        "K08sl"
+    ],
+    "sorbitol": [
+        "K09sl",
+        "K10sl"
+    ],
+    "oxidative_stress": [
+        "K11sl",
+        "K12sl"
+    ],
+    "heat_shock": [
+        "K13sl",
+        "K14sl"
+    ],
+    "stationary_phase": [
+        "K15sl",
+        "K16sl"
+    ],
+    "sc_media": [
+        "K17sl",
+        "K18sl"
+    ],
+    "sc_glycerol_media": [
+        "K19sl",
+        "K20sl"
+    ],
+    "high_calcium": [
+        "K21sl",
+        "K22sl"
+    ],
+    "low_nitrogen": [
+        "K23sl",
+        "K24sl"
+    ],
+    "low_phosphate": [
+        "K25sl",
+        "K26sl"
+    ],
+    "calcofluor": [
+        "K27sl",
+        "K28sl"
+    ],
+    "hydroxyurea": [
+        "K29sl",
+        "K30sl"
+    ],
+    "grape_juice": [
+        "K31sl",
+        "K32sl"
+    ],
+    "benomyl": [
+        "K33sl",
+        "K34sl"
+    ],
+    "congo_red": [
+        "K35sl",
+        "K36sl"
+    ]
+}
