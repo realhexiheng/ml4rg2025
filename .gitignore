@@ -11,6 +11,7 @@ RNA_prediction/
 RNA_prediction-mini/
 lightning_logs/
 wandb/
+max_positions_log.csv
 
 # C extensions
 *.so
