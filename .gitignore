@@ -6,7 +6,7 @@ __pycache__/
 # Data
 data/embeddings/
 data/waern_2013/
-data/processed/
+data/processed/genewise.h5
 RNA_prediction/
 RNA_prediction-mini/
 lightning_logs/

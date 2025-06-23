@@ -3,14 +3,13 @@ project 06 - Predicting multiple RNA profiles at once on Saccharomyces cerevisia
 
 ## Resources
 
-[Project description](https://docs.google.com/document/d/1371zvQSwjMryL6-9ZU7JzNc-EwSsMsTFOqVXHBheF98/edit?tab=t.0)
+- [Shared Drive](https://drive.google.com/drive/folders/1fq_oc8jSxdT0Eu7sk94D9UR4hftLevma?usp=sharing)
+- [WandB](https://wandb.ai/nictru32-tum/RNA_prediction?nw=nwusernictru32)
 
-[Data](https://drive.google.com/drive/u/0/folders/1IHKACrqhhqUHTQUjqecX9ttJ4w209gwN)
+## Data setup
 
-[Shared Data from Xiheng](https://drive.google.com/drive/folders/10OPQ8c530qhksk2GFFNUUtRsmL72SZcT?usp=sharing)
-[Shared Data from Nico](https://drive.google.com/drive/folders/1nvqwrMND1klkVFwYz8_4wdAdYodCLJP4?usp=sharing)
-
-TODO - just markdown or google doc?
+1. Download the `genewise.h5` file from the "processed" folder of the shared drive.
+2. Move the file to the `data/processed` folder.
 
 ## Environment Setup
 This project uses [uv](https://pypi.org/project/uv/) for managing the development environment.
@@ -49,5 +48,3 @@ This project uses [uv](https://pypi.org/project/uv/) for managing the developmen
     ```sh
     deactivate
     ```
-
-## Baseline Model
