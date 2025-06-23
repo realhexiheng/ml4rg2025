@@ -6,7 +6,7 @@ class ParalogousGeneDataModule(CrossValidationDataModule):
     CrossValidationDataModule with chromosome and paralog group stratification.
     """
 
-    def _create_folds(self):
+    def _create_folds(self, n_folds: int):
         """Create fold assignments using chromosome and paralog group stratification."""
 
         if "paralog_group" not in self.summary.columns:
@@ -18,7 +18,7 @@ class ParalogousGeneDataModule(CrossValidationDataModule):
         self.summary["fold"] = -1
 
         sgkf = StratifiedGroupKFold(
-            n_splits=5,
+            n_splits=n_folds,
             shuffle=True,
             random_state=self.seed,
         )

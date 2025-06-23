@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 import pytorch_lightning as pl
 import csv
+import numpy as np
 
 
 class LinearModel(pl.LightningModule):
@@ -55,8 +56,6 @@ class ConvolutionalModel(pl.LightningModule):
 
     Parameters
     ----------
-    window_size : int
-        Size of the embedding context window.
     n_conditions : int
         Number of output conditions to predict.
     learning_rate : float
@@ -67,18 +66,20 @@ class ConvolutionalModel(pl.LightningModule):
 
     def __init__(
         self,
-        window_size: int = 500,
         n_conditions: int = 18,
         learning_rate: float = 1e-3,
         pooling_type: str = "mean",
+        average_window: bool = False,
+        weight_decay: float = 1e-4,
     ):
         super().__init__()
-        self.window_size = window_size
 
         # Validate pooling type
         if pooling_type not in ["mean", "max"]:
             raise ValueError("pooling_type must be either 'mean' or 'max'")
         self.pooling_type = pooling_type
+        self.average_window = average_window
+        self.weight_decay = weight_decay
 
         # Conv1d expects input shape [batch_size, in_channels, sequence_length]
         # Here in_channels = 768 (embedding dimension)
@@ -93,6 +94,9 @@ class ConvolutionalModel(pl.LightningModule):
         self.csv_log_path = "max_positions_log.csv"
         self.logged_rows = []
 
+        # For collecting validation predictions and targets
+        self.validation_step_outputs = []
+
     def on_fit_start(self):
         # create position tracking file
         with open(self.csv_log_path, "w", newline="") as f:
@@ -100,6 +104,11 @@ class ConvolutionalModel(pl.LightningModule):
             writer.writerow(["epoch", "gene", "condition", "max_position", "max_value"])
 
     def forward(self, x):
+        # Average across the window size dimension
+        if self.average_window:
+            x = torch.mean(x, dim=1)
+            x = x.unsqueeze(1)
+
         # x shape: [batch_size, window_size, 768]
         # Transpose to get [batch_size, 768, window_size] for Conv1d
         x = x.transpose(1, 2)
@@ -124,9 +133,13 @@ class ConvolutionalModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x, y = batch
         x = x.float()
-        y_hat = self(x.float())
-        loss = self.loss_fn(y_hat, y.float())
+        y = y.float()
+        y_hat = self(x)
+        loss = self.loss_fn(y_hat, y)
         self.log("val_loss", loss)
+
+        # Store predictions and targets for correlation/explained variance calculation
+        self.validation_step_outputs.append({"y_hat": y_hat.detach(), "y": y.detach()})
 
         if self.pooling_type == "max":
             self._log_max_positions(x, batch_idx)
@@ -156,11 +169,54 @@ class ConvolutionalModel(pl.LightningModule):
                 )
 
     def on_validation_epoch_end(self):
+        # Log max positions if available
         if self.logged_rows:
             with open(self.csv_log_path, "a", newline="") as f:
                 writer = csv.writer(f)
                 writer.writerows(self.logged_rows)
             self.logged_rows = []
 
+        # Calculate and log correlation and explained variance
+        if self.validation_step_outputs:
+            # Concatenate all predictions and targets
+            all_y_hat = torch.cat(
+                [x["y_hat"] for x in self.validation_step_outputs], dim=0
+            )
+            all_y = torch.cat([x["y"] for x in self.validation_step_outputs], dim=0)
+
+            # Calculate metrics for each condition
+            correlations = []
+            explained_variances = []
+
+            for condition in range(all_y.shape[1]):
+                y_true = all_y[:, condition]
+                y_pred = all_y_hat[:, condition]
+
+                # Calculate correlation
+                if torch.var(y_true) > 0 and torch.var(y_pred) > 0:
+                    correlation = torch.corrcoef(torch.stack([y_true, y_pred]))[0, 1]
+                    if not torch.isnan(correlation):
+                        correlations.append(correlation.item())
+
+                # Calculate explained variance
+                if torch.var(y_true) > 0:
+                    explained_var = 1 - torch.var(y_true - y_pred) / torch.var(y_true)
+                    if not torch.isnan(explained_var):
+                        explained_variances.append(explained_var.item())
+
+            # Log average metrics across all conditions
+            if correlations:
+                avg_correlation = np.mean(correlations)
+                self.log("val_correlation", avg_correlation, prog_bar=True)
+
+            if explained_variances:
+                avg_explained_variance = np.mean(explained_variances)
+                self.log("val_explained_variance", avg_explained_variance, prog_bar=True)
+
+            # Clear the outputs for next epoch
+            self.validation_step_outputs.clear()
+
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+        return torch.optim.Adam(
+            self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
+        )

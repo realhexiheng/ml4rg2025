@@ -7,12 +7,12 @@ class ChromosomeStratifiedDataModule(CrossValidationDataModule):
     CrossValidationDataModule with chromosome-wise stratification.
     """
 
-    def _create_folds(self):
+    def _create_folds(self, n_folds: int):
         """Create fold assignments using chromosome stratification."""
         self.summary["fold"] = -1
 
         skf = StratifiedKFold(
-            n_splits=5,
+            n_splits=n_folds,
             shuffle=True,
             random_state=self.seed,
         )

@@ -1,4 +1,3 @@
-from pathlib import Path
 from abc import ABC, abstractmethod
 
 import lightning as L
@@ -35,24 +34,27 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
     def __init__(
         self,
         reader: HDFReader,
-        summary: str | Path,
+        summary: pd.DataFrame,
         test_fold: int,
         validation: bool = False,
         batch_size: int = 32,
         num_workers: int = 4,
         seed: int = 42,
+        prefetch_factor: int = 10,
+        n_folds: int = 5,
     ):
         """
         Initialize CrossValidationDataModule.
 
         Args:
             reader: HDFReader instance for loading embeddings/expressions
-            summary: Path to summary CSV file
+            summary: Summary dataframe
             test_fold: Which fold (0-4) to use as test set
             validation: Whether to split training data into train/val
             batch_size: Batch size for data loaders
             num_workers: Number of workers for data loading
             seed: Random seed for reproducibility
+            prefetch_factor: Prefetch factor for data loading
         """
         super().__init__()
         # self.save_hyperparameters()
@@ -65,7 +67,7 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
         self.dataloader_kwargs = {
             "batch_size": batch_size,
             "shuffle": True,
-            "prefetch_factor": 10,
+            "prefetch_factor": prefetch_factor,
             "persistent_workers": True,
             "num_workers": num_workers,
             "collate_fn": self.collate_fn,
@@ -76,12 +78,12 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
             raise ValueError(f"Index of fold must be 0-4, got {test_fold}")
 
         # Load and prepare data
-        self.summary = pd.read_csv(summary)
-        self._create_folds()
+        self.summary = summary
+        self._create_folds(n_folds)
         self._create_splits()
 
     @abstractmethod
-    def _create_folds(self):
+    def _create_folds(self, n_folds: int):
         """Create fold assignments. Must add 'fold' column to self.summary."""
         pass
 
