@@ -21,6 +21,11 @@ class GeneDataset(Dataset):
     def __getitem__(self, idx):
         return self.data.iloc[idx].to_dict()
 
+    @property
+    def genes(self):
+        """Return list of gene names for compatibility with model logging."""
+        return self.data["gene"].tolist()
+
 
 class CrossValidationDataModule(L.LightningDataModule, ABC):
     """
@@ -50,7 +55,7 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
             seed: Random seed for reproducibility
         """
         super().__init__()
-        self.save_hyperparameters()
+        # self.save_hyperparameters()
 
         self.reader = reader
         self.test_fold = test_fold
@@ -152,7 +157,4 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
         embeddings = torch.stack([torch.from_numpy(emb).float() for emb in embeddings])
         expressions = torch.stack([torch.from_numpy(exp).float() for exp in expressions])
 
-        return {
-            "embeddings": embeddings,  # Shape: (batch_size, 500, 768)
-            "expressions": expressions,  # Shape: (batch_size, 18)
-        }
+        return embeddings, expressions

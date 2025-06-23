@@ -7,8 +7,8 @@ __pycache__/
 data/embeddings/
 data/waern_2013/
 data/processed/
-src/RNA_prediction
-src/RNA_prediction-mini
+RNA_prediction/
+RNA_prediction-mini/
 lightning_logs/
 wandb/
 

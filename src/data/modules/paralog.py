@@ -31,6 +31,3 @@ class ParalogousGeneDataModule(CrossValidationDataModule):
             )
         ):
             self.summary.loc[test_idx, "fold"] = fold
-
-        print("\nStratifiedGroupKFold chromosome distribution by fold:")
-        print(self.summary.groupby(["fold", "chromosome"]).size().unstack(fill_value=0))
