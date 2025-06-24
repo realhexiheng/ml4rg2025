@@ -1,6 +1,7 @@
 import numpy as np
 from tqdm import tqdm
-
+from Bio import SeqIO
+from Bio.Seq import Seq
 
 def get_upstream_window_coordinates(cds_coord, window_size):
     strand = cds_coord["strand"]
@@ -52,6 +53,50 @@ def get_gene_embeddings(cds_coords, chromosome_embedding, window_size=500):
             cds_coord, chromosome_embedding, window_size
         )
     return gene_embeddings
+
+
+
+def get_gene_sequence(gene_info, fasta_path, rename_map=None):
+    """
+    Reconstructs gene sequence from FASTA file based on coordinates and strand info.
+
+    Args:
+        gene_info (dict): Dictionary with structure like:
+                          {
+                              'chromosome': 'chrI',
+                              'strand': '+',
+                              'coordinates': [(start1, end1), (start2, end2), ...]
+                          }
+        fasta_path (str): Path to the FASTA file.
+        rename_map (dict): Optional mapping from FASTA chromosome IDs to standard names.
+
+    Returns:
+        str: Nucleotide sequence of the gene.
+    """
+    # Load the fasta into a dictionary of {chromosome_name: sequence}
+    fasta_records = {
+        (rename_map.get(record.id, record.id) if rename_map else record.id): record.seq
+        for record in SeqIO.parse(fasta_path, "fasta")
+    }
+
+    chrom = gene_info["chromosome"]
+    strand = gene_info["strand"]
+    coords = gene_info["coordinates"]
+
+    if chrom not in fasta_records:
+        raise ValueError(f"Chromosome {chrom} not found in FASTA.")
+
+    sequence = fasta_records[chrom]
+
+    # Extract and concatenate all regions
+    gene_seq = ''.join([str(sequence[start:end]) for start, end in coords])
+
+    # Reverse complement if on the negative strand
+    if strand == "-":
+        gene_seq = str(Seq(gene_seq).reverse_complement())
+
+    return gene_seq
+
 
 
 def get_normalized_gene_expression(cds_coords, condition_samples, sample_expression):
