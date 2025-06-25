@@ -2,6 +2,8 @@ from pathlib import Path
 
 import numpy as np
 from tqdm import tqdm
+from Bio import SeqIO
+from Bio.Seq import Seq
 
 from src.utils.genome import get_upstream_window_coordinates
 
@@ -190,3 +192,5 @@ def get_normalized_gene_expression(
     condition_tpm, _ = aggregate_tpm_by_condition(gene_tpm, samples, condition_samples)
 
     return np.log1p(condition_tpm).astype(np.float16)
+
+

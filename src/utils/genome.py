@@ -3,6 +3,9 @@ from pathlib import Path
 
 import pandas as pd
 from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
 
 FASTA_CHROMOSOME_RENAME_MAP = {
     "ref|NC_001133|": "chrI",
@@ -74,6 +77,82 @@ def parse_gff(gff: str | Path) -> pd.DataFrame:
 
     return annotation
 
+def extract_snippets_from_upstream(
+    df, 
+    cds_coords, 
+    fasta_path, 
+    rename_map, 
+    upstream_window=500, 
+    motif_window=20
+):
+    """
+    Adds a 'snippet' column to the DataFrame containing sequences around max_position
+    from the upstream region of each gene.
+
+    Args:
+        df (pd.DataFrame): DataFrame with columns 'gene' and 'max_position'.
+        cds_coords (dict): Dict mapping gene -> {'chromosome', 'strand', 'coordinates'}.
+        fasta_path (str): Path to the genome FASTA file.
+        rename_map (dict): Mapping from FASTA record IDs to chromosome names.
+        upstream_window (int): Length of upstream region to extract.
+        motif_window (int): Half-width of the motif snippet (total length = 2*motif_window).
+
+    Returns:
+        pd.DataFrame: Modified DataFrame with added 'snippet' column.
+    """
+    for gene in df.gene.unique():
+        if gene not in cds_coords:
+            continue
+
+        upstream_window_coordinates = get_upstream_window_coordinates(cds_coords[gene], upstream_window)
+        
+        gene_data = {
+            'chromosome': cds_coords[gene]["chromosome"],
+            'strand': cds_coords[gene]["strand"],
+            'coordinates': [(upstream_window_coordinates[0], upstream_window_coordinates[1])]
+        }
+
+        seq = get_gene_sequence(gene_data, fasta_path, rename_map=rename_map)
+
+        for idx, row in df[df.gene == gene].iterrows():
+            snippet = get_snippet_around_position(seq, row["max_position"], motif_window)
+            df.at[idx, "snippet"] = snippet
+
+    return df
+
+def parse_gff_old(gff_path):
+    # Get coordinates of the coding sequences
+    # The format is {gene_id: {
+    #     "chromosome": "chrI",
+    #     "strand": "+",
+    #     "coordinates": [(start, end), (start, end), ...]
+    # }}
+    cds_coords = defaultdict(dict)
+    with open(gff_path) as gff_file:
+        for line in gff_file:
+            if line.startswith("#"):
+                continue
+            columns = line.split("\t")
+            if len(columns) < 9:
+                continue
+            if columns[2] != "CDS":
+                continue
+            attrs = {kv.split("=")[0]: kv.split("=")[1] for kv in columns[8].split(";")}
+            gene = attrs.get("Name")[:-4]
+            if gene is None:
+                continue
+            start, end = int(columns[3]) - 1, int(
+                columns[4]
+            )  # 1-based to 0-based, end excluded
+            chrom = columns[0]
+            if chrom == "chrmt":
+                chrom = "chrM"
+            cds_coords[gene]["chromosome"] = chrom
+            cds_coords[gene]["strand"] = columns[6]
+            if "coordinates" not in cds_coords[gene]:
+                cds_coords[gene]["coordinates"] = []
+            cds_coords[gene]["coordinates"].append((start, end))
+    return cds_coords
 
 def get_upstream_window_coordinates(
     cds_coord: dict,
@@ -100,6 +179,10 @@ def get_upstream_window_coordinates(
 
     return start, end, strand
 
+def get_snippet_around_position(seq, position, window):
+    start = max(position - window, 0)
+    end = min(position + window, len(seq))
+    return seq[start:end]
 
 def get_chromosome_lengths(fasta_path: Path) -> dict[str, int]:
     """Get lengths of chromosomes from a FASTA file
@@ -163,3 +246,44 @@ def get_cds_coord(annotation: pd.DataFrame) -> dict[str, dict]:
         cds_coords[gene_id]["coordinates"] = coords
 
     return dict(cds_coords)
+
+def get_gene_sequence(gene_info, fasta_path, rename_map=None):
+    """
+    Reconstructs gene sequence from FASTA file based on coordinates and strand info.
+
+    Args:
+        gene_info (dict): Dictionary with structure like:
+                          {
+                              'chromosome': 'chrI',
+                              'strand': '+',
+                              'coordinates': [(start1, end1), (start2, end2), ...]
+                          }
+        fasta_path (str): Path to the FASTA file.
+        rename_map (dict): Optional mapping from FASTA chromosome IDs to standard names.
+
+    Returns:
+        str: Nucleotide sequence of the gene.
+    """
+    # Load the fasta into a dictionary of {chromosome_name: sequence}
+    fasta_records = {
+        (rename_map.get(record.id, record.id) if rename_map else record.id): record.seq
+        for record in SeqIO.parse(fasta_path, "fasta")
+    }
+
+    chrom = gene_info["chromosome"]
+    strand = gene_info["strand"]
+    coords = gene_info["coordinates"]
+
+    if chrom not in fasta_records:
+        raise ValueError(f"Chromosome {chrom} not found in FASTA.")
+
+    sequence = fasta_records[chrom]
+
+    # Extract and concatenate all regions
+    gene_seq = ''.join([str(sequence[start:end]) for start, end in coords])
+
+    # Reverse complement if on the negative strand
+    if strand == "-":
+        gene_seq = str(Seq(gene_seq).reverse_complement())
+
+    return gene_seq

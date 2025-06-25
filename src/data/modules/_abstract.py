@@ -38,9 +38,9 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
         test_fold: int,
         validation: bool = False,
         batch_size: int = 32,
-        num_workers: int = 4,
+        num_workers: int = 0,
         seed: int = 42,
-        prefetch_factor: int = 10,
+        prefetch_factor:int = None,
         n_folds: int = 5,
     ):
         """
@@ -67,12 +67,16 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
         self.dataloader_kwargs = {
             "batch_size": batch_size,
             "shuffle": True,
-            "prefetch_factor": prefetch_factor,
-            "persistent_workers": True,
             "num_workers": num_workers,
+            "persistent_workers": num_workers > 0,
             "collate_fn": self.collate_fn,
             "pin_memory": True,
-        }
+            }
+
+        # Only add prefetch_factor if using multiprocessing
+        if num_workers > 0 and prefetch_factor is not None:
+            self.dataloader_kwargs["prefetch_factor"] = prefetch_factor
+
 
         if not 0 <= test_fold <= 4:
             raise ValueError(f"Index of fold must be 0-4, got {test_fold}")
@@ -131,6 +135,7 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
         return DataLoader(
             self.test_data,
             **self.dataloader_kwargs,
+
         )
 
     def collate_fn(self, batch: list[dict]) -> dict[str, torch.Tensor]:

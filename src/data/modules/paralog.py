@@ -31,3 +31,4 @@ class ParalogousGeneDataModule(CrossValidationDataModule):
             )
         ):
             self.summary.loc[test_idx, "fold"] = fold
+
