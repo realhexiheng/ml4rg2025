@@ -206,10 +206,15 @@ cython_debug/
 notebooks/
 
 # temporary files
-obsolete/
 scripts/
 .pybiomart.sqlite
 dvc.yaml
 params.yaml
 configs/experiment/sweep.yaml
 configs/config.yaml
+
+# data folder
+data/
+! data/genome
+! data/processed
+! samples.json
