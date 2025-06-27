@@ -202,9 +202,6 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# notebooks
-notebooks/
-
 # temporary files
 scripts/
 .pybiomart.sqlite
