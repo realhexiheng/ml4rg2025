@@ -66,11 +66,10 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
         self.dataloader_kwargs = {
             "batch_size": batch_size,
             "shuffle": True,
-            "prefetch_factor": prefetch_factor,
-            "persistent_workers": True,
+            "prefetch_factor": prefetch_factor if num_workers > 0 else None,
             "num_workers": num_workers,
             "collate_fn": self.collate_fn,
-            "pin_memory": True,
+            "pin_memory": torch.cuda.is_available(),
         }
 
         if not 0 <= test_fold <= 4:
