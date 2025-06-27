@@ -3,9 +3,8 @@ from abc import ABC, abstractmethod
 import lightning as L
 import pandas as pd
 import torch
-from torch.utils.data import DataLoader, Dataset
-
 from src.utils.io import HDFReader
+from torch.utils.data import DataLoader, Dataset
 
 
 class GeneDataset(Dataset):
@@ -57,7 +56,7 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
             prefetch_factor: Prefetch factor for data loading
         """
         super().__init__()
-        # self.save_hyperparameters()
+        self.save_hyperparameters(ignore=["reader", "summary"])
 
         self.reader = reader
         self.test_fold = test_fold
