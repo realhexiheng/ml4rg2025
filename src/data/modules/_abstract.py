@@ -131,15 +131,17 @@ class CrossValidationDataModule(L.LightningDataModule, ABC):
             **self.dataloader_kwargs,
         )
 
-    def collate_fn(self, batch: list[dict]) -> dict[str, torch.Tensor]:
+    def collate_fn(self, batch: list[dict]) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Custom collate function to load embeddings (X) and RNA targets (y) on-demand.
 
         Args:
             batch: List of dictionaries from dataset
-
         Returns:
-            Dictionary with 'embeddings' and 'expressions' tensors
+            tuple: (embeddings, expressions) where:
+                - embeddings: Tensor of shape (batch_size, embedding_dim)
+                - expressions: Tensor of shape (batch_size, expression_dim)
+
         """
         embeddings = []
         expressions = []
