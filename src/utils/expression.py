@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import numpy as np
-from tqdm import tqdm
 
 from src.utils.genome import get_upstream_window_coordinates
 

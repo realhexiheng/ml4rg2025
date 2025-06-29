@@ -1,14 +1,16 @@
-from pandas import DataFrame
-from pybiomart import Server
 from collections import defaultdict
 
+from pandas import DataFrame
+from pybiomart import Server
 
-def query_paralogs(genes: list) -> DataFrame:
+
+def query_paralogs(genes: list, attrs: list = None) -> DataFrame:
     """
     Retrieves paralogous genes for a list of S. cerevisiae gene IDs using BioMart.
 
     Args:
         genes (list): A list of S. cerevisiae gene IDs (e.g., 'YML028W', 'YLR042W').
+        attrs (list): User-defined attributes to include in the query, will override defaults.
 
     Returns:
         pandas.DataFrame: A DataFrame with query gene IDs and their paralog information.
@@ -17,13 +19,19 @@ def query_paralogs(genes: list) -> DataFrame:
 
     dataset = server.marts["ENSEMBL_MART_ENSEMBL"].datasets["scerevisiae_gene_ensembl"]
 
-    attributes = [
-        "ensembl_gene_id",
-        "scerevisiae_paralog_ensembl_gene",
-        "scerevisiae_paralog_chromosome",
-        "scerevisiae_paralog_orthology_type",
-        "scerevisiae_paralog_perc_id",
-    ]
+    attributes = (
+        [
+            "ensembl_gene_id",
+            "scerevisiae_paralog_ensembl_gene",
+            "strand",
+            "scerevisiae_paralog_chromosome",
+            "scerevisiae_paralog_orthology_type",
+            "scerevisiae_paralog_perc_id",
+            "scerevisiae_paralog_perc_id_r1",
+        ]
+        if attrs is None
+        else attrs
+    )
 
     print(f"Querying BioMart for paralogs of {len(genes)} genes...")
 
@@ -34,6 +42,7 @@ def query_paralogs(genes: list) -> DataFrame:
             "scerevisiae_paralog_chromosome": "paralog_chromosome",
             "scerevisiae_paralog_orthology_type": "orthology_type",
             "scerevisiae_paralog_perc_id": "percent_identity",
+            "scerevisiae_paralog_perc_id_r1": "percent_identity_r1",
         }
     )
 
